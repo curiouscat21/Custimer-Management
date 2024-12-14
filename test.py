@@ -93,27 +93,37 @@ def test_get_permission_levels_success(client: FlaskClient, mock_db):
     response = client.get("/permission_levels")
     assert response.status_code == 200
 
-def test_add_permission_level(client: FlaskClient, mock_db):
+def test_add_permission_level(client: FlaskClient):
     data = {
         "Permission_Level_Code": "WRITE",
         "Permission_Level_Description": "Write Access"
     }
     response = client.post("/permission_levels", json=data)
     assert response.status_code == 201
+    assert "Permission level(s) added successfully" in response.get_data(as_text=True)
+
+def test_update_permission_level(client: FlaskClient, mock_db):
+    data = {
+        "permission_description": "Updated Description"
+    }
+    response = client.put("/permission_levels/1", json=data)
+    assert response.status_code == 200
+    assert "Permission level updated successfully" in response.get_data(as_text=True)
 
 # People Endpoint Tests
 def test_add_person_success(client: FlaskClient, mock_db):
     person_data = {
-        "country_code": "US",
-        "permission_level_code": "READ",
-        "role_code": "USER",
-        "login_name": "testuser",
-        "password": "password123",
-        "personal_details": "Test User",
-        "other_details": "None"
+        "Permission_Level_Code": "READ",
+        "Login_Name": "testuser",
+        "Password": "password123",
+        "Personal_Details": "Test User",
+        "Other_Details": "None",
+        "Country_Name": "US",
+        "Role_Description": "USER"
     }
     response = client.post("/people", json=person_data)
     assert response.status_code == 201
+    assert "Person added successfully" in response.get_data(as_text=True)
 
 # Internal Messages Endpoint Tests
 def test_get_messages_success(client: FlaskClient, mock_db):

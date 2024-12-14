@@ -27,162 +27,6 @@ def validate_actor_data(data):
     if not data.get("first_name") or not data.get("last_name"):
         raise BadRequest("Both first_name and last_name are required.")
 
-@app.route("/countries", methods=["GET"])
-def get_countries():
-    try:
-        data = data_fetch("SELECT * FROM Countries")
-        return make_response(jsonify(data), 200)
-    except Exception as e:
-        return make_response(jsonify({"error": str(e)}), 500)
-
-@app.route("/countries", methods=["POST"])
-def add_country():
-    try:
-        cur = mysql.connection.cursor()
-        info = request.get_json()
-
-        # Extract and validate data
-        country_name = info.get("country_name")
-        country_code = info.get("country_code")
-        if not country_name or not country_code:
-            return make_response(jsonify({"error": "Country name and code are required"}), 400)
-
-        # Insert into database
-        cur.execute(
-            "INSERT INTO Countries (Country_Name, Country_Code) VALUES (%s, %s)",
-            (country_name, country_code),
-        )
-        mysql.connection.commit()
-
-        return make_response(jsonify({"message": "Country added successfully"}), 201)
-    except Exception as e:
-        return make_response(jsonify({"error": str(e)}), 400)
-
-@app.route("/countries/<int:id>", methods=["PUT"])
-def update_country(id):
-    try:
-        cur = mysql.connection.cursor()
-        info = request.get_json()
-
-        # Extract and validate data
-        country_name = info.get("country_name")
-        country_code = info.get("country_code")
-        if not country_name or not country_code:
-            return make_response(jsonify({"error": "Country name and code are required"}), 400)
-
-        # Update database
-        cur.execute(
-            """
-            UPDATE Countries
-            SET Country_Name = %s, Country_Code = %s
-            WHERE Country_ID = %s
-            """,
-            (country_name, country_code, id),
-        )
-        mysql.connection.commit()
-
-        if cur.rowcount == 0:
-            return make_response(jsonify({"error": "Country not found"}), 404)
-
-        return make_response(jsonify({"message": "Country updated successfully"}), 200)
-    except Exception as e:
-        return make_response(jsonify({"error": str(e)}), 400)
-
-@app.route("/countries/<int:id>", methods=["DELETE"])
-def delete_country(id):
-    try:
-        cur = mysql.connection.cursor()
-
-        # Delete from database
-        cur.execute("DELETE FROM Countries WHERE Country_ID = %s", (id,))
-        mysql.connection.commit()
-
-        if cur.rowcount == 0:
-            return make_response(jsonify({"error": "Country not found"}), 404)
-
-        return make_response(jsonify({"message": "Country deleted successfully"}), 200)
-    except Exception as e:
-        return make_response(jsonify({"error": str(e)}), 400)
-
-
-@app.route("/roles", methods=["GET"])
-def get_roles():
-    try:
-        data = data_fetch("SELECT * FROM Roles")
-        return make_response(jsonify(data), 200)
-    except Exception as e:
-        return make_response(jsonify({"error": str(e)}), 500)
-    
-@app.route("/roles", methods=["POST"])
-def add_role():
-    try:
-        cur = mysql.connection.cursor()
-        data = request.get_json()
-
-        # Check if it's a list (bulk insert) or single insert
-        if isinstance(data, list):
-            query = """
-                INSERT INTO Roles (Role_Code, Role_Description)
-                VALUES (%s, %s)
-            """
-            values = [(role["role_code"], role["role_description"]) for role in data]
-            cur.executemany(query, values)
-        else:
-            query = """
-                INSERT INTO Roles (Role_Code, Role_Description)
-                VALUES (%s, %s)
-            """
-            values = (data["role_code"], data["role_description"])
-            cur.execute(query, values)
-
-        mysql.connection.commit()
-        return make_response(jsonify({"message": "Roles added successfully"}), 201)
-    except Exception as e:
-        return make_response(jsonify({"error": str(e)}), 400)
-
-
-@app.route("/roles/<int:id>", methods=["PUT"])
-def update_role(id):
-    try:
-        cur = mysql.connection.cursor()
-        info = request.get_json()
-
-        # Extract and validate data
-        role_description = info.get("role_description")
-        if not role_description:
-            return make_response(jsonify({"error": "Role description is required"}), 400)
-
-        # Update database
-        cur.execute(
-            "UPDATE Roles SET Role_Description = %s WHERE Role_ID = %s",
-            (role_description, id),
-        )
-        mysql.connection.commit()
-
-        if cur.rowcount == 0:
-            return make_response(jsonify({"error": "Role not found"}), 404)
-
-        return make_response(jsonify({"message": "Role updated successfully"}), 200)
-    except Exception as e:
-        return make_response(jsonify({"error": str(e)}), 400)
-
-
-@app.route("/roles/<int:id>", methods=["DELETE"])
-def delete_role(id):
-    try:
-        cur = mysql.connection.cursor()
-
-        # Delete from database
-        cur.execute("DELETE FROM Roles WHERE Role_ID = %s", (id,))
-        mysql.connection.commit()
-
-        if cur.rowcount == 0:
-            return make_response(jsonify({"error": "Role not found"}), 404)
-
-        return make_response(jsonify({"message": "Role deleted successfully"}), 200)
-    except Exception as e:
-        return make_response(jsonify({"error": str(e)}), 400)
-
 
 @app.route("/permission_levels", methods=["GET"])
 def get_permission_levels():
@@ -265,74 +109,127 @@ def delete_permission_level(id):
         return make_response(jsonify({"error": str(e)}), 400)
 
 
+@app.route("/people", methods=["GET"])
+def get_people():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            SELECT Person_ID, Permission_Level_Code, Login_Name, 
+                   Password, Personal_Details, Other_Details, Country_Name, 
+                   Role_Description
+            FROM People
+        """)
+        people = cur.fetchall()
+        return make_response(jsonify({"people": people}), 200)
+    except Exception as e:
+        return make_response(jsonify({"error": str(e)}), 400)
+
+
 @app.route("/people", methods=["POST"])
 def add_person():
     try:
         cur = mysql.connection.cursor()
         info = request.get_json()
 
-        # Extract data from JSON
-        country_code = info.get("country_code")
-        permission_level_code = info.get("permission_level_code")
-        role_code = info.get("role_code")
-        login_name = info.get("login_name")
-        password = info.get("password")
-        personal_details = info.get("personal_details")
-        other_details = info.get("other_details")
+        # Extract all fields from JSON
+        required_fields = [
+            "Permission_Level_Code",
+            "Login_Name",
+            "Password",
+            "Personal_Details",
+            "Other_Details",
+            "Country_Name",
+            "Role_Description"
+        ]
+        
+        # Validate required fields
+        for field in required_fields:
+            if field not in info:
+                return make_response(
+                    jsonify({"error": f"Missing required field: {field}"}),
+                    400
+                )
 
         # Insert data into the database
         cur.execute(
             """
-            INSERT INTO People (Country_Code, Permission_Level_Code, Role_Code, Login_Name, Password, Personal_Details, Other_Details)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO People (
+                Permission_Level_Code, Login_Name, Password,
+                Personal_Details, Other_Details, Country_Name, Role_Description
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
-            (country_code, permission_level_code, role_code, login_name, password, personal_details, other_details),
+            (
+                info["Permission_Level_Code"],
+                info["Login_Name"],
+                info["Password"],
+                info["Personal_Details"],
+                info["Other_Details"],
+                info["Country_Name"],
+                info["Role_Description"]
+            )
         )
         mysql.connection.commit()
-
         return make_response(jsonify({"message": "Person added successfully"}), 201)
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), 400)
-@app.route("/people/<int:id>", methods=["PUT"])
 
+
+@app.route("/people/<int:id>", methods=["PUT"])
 def update_person(id):
     try:
         cur = mysql.connection.cursor()
         info = request.get_json()
 
-        # Extract data from JSON
-        country_code = info.get("country_code")
-        permission_level_code = info.get("permission_level_code")
-        role_code = info.get("role_code")
-        login_name = info.get("login_name")
-        password = info.get("password")
-        personal_details = info.get("personal_details")
-        other_details = info.get("other_details")
+        # Extract all fields from JSON
+        fields = {
+            "Permission_Level_Code": info.get("Permission_Level_Code"),
+            "Login_Name": info.get("Login_Name"),
+            "Password": info.get("Password"),
+            "Personal_Details": info.get("Personal_Details"),
+            "Other_Details": info.get("Other_Details"),
+            "Country_Name": info.get("Country_Name"),
+            "Role_Description": info.get("Role_Description")
+        }
 
-        # Update data in the database
-        cur.execute(
-            """
-            UPDATE People
-            SET Country_Code = %s, Permission_Level_Code = %s, Role_Code = %s,
-                Login_Name = %s, Password = %s, Personal_Details = %s, Other_Details = %s
+        # Build dynamic update query based on provided fields
+        update_fields = []
+        values = []
+        for key, value in fields.items():
+            if value is not None:
+                update_fields.append(f"{key} = %s")
+                values.append(value)
+
+        if not update_fields:
+            return make_response(jsonify({"error": "No fields to update"}), 400)
+
+        # Add the ID to the values list
+        values.append(id)
+
+        # Create and execute update query
+        query = f"""
+            UPDATE People 
+            SET {", ".join(update_fields)}
             WHERE Person_ID = %s
-            """,
-            (country_code, permission_level_code, role_code, login_name, password, personal_details, other_details, id),
-        )
+        """
+        cur.execute(query, values)
         mysql.connection.commit()
+
+        if cur.rowcount == 0:
+            return make_response(jsonify({"error": "Person not found"}), 404)
 
         return make_response(jsonify({"message": "Person updated successfully"}), 200)
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), 400)
-    
+
 @app.route("/people/<int:id>", methods=["DELETE"])
 def delete_person(id):
     try:
         cur = mysql.connection.cursor()
-
-        # Delete data from the database
         cur.execute("DELETE FROM People WHERE Person_ID = %s", (id,))
         mysql.connection.commit()
+
+        if cur.rowcount == 0:
+            return make_response(jsonify({"error": "Person not found"}), 404)
 
         return make_response(jsonify({"message": "Person deleted successfully"}), 200)
     except Exception as e:
