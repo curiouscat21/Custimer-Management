@@ -1,6 +1,8 @@
 from flask import Flask, make_response, jsonify, request
 from flask_mysqldb import MySQL
 from werkzeug.exceptions import BadRequest
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from marshmallow import Schema, fields, ValidationError
 
 app = Flask(__name__)
 app.config["MYSQL_HOST"] = "127.0.0.1"
@@ -8,6 +10,8 @@ app.config["MYSQL_USER"] = "root"
 app.config["MYSQL_PASSWORD"] = "root"
 app.config["MYSQL_DB"] = "CustomerManagementSystem"
 app.config["MYSQL_CURSORCLASS"] = "DictCursor"
+app.config["JWT_SECRET_KEY"] = "Drew's_secret_key123"  # Change this to a strong secret key
+jwt = JWTManager(app)
 
 mysql = MySQL(app)
 
@@ -42,30 +46,26 @@ def add_permission_level():
         cur = mysql.connection.cursor()
         data = request.get_json()
 
-        # Debugging output
-        print(f"Received data: {data}")
+        # Validate required fields
+        if not data.get("Permission_Level_Code") or not data.get("Permission_Level_Description"):
+            return make_response(jsonify({"error": "Both Permission_Level_Code and Permission_Level_Description are required."}), 400)
 
-        # Check if the data is a list (for bulk insertion) or a single object
-        if isinstance(data, list):
-            query = """
-                INSERT INTO Permission_Levels (Permission_Level_Code, Permission_Level_Description)
-                VALUES (%s, %s)
-            """
-            values = [(level["Permission_Level_Code"], level["Permission_Level_Description"]) for level in data]
-            cur.executemany(query, values)
-        else:
-            query = """
-                INSERT INTO Permission_Levels (Permission_Level_Code, Permission_Level_Description)
-                VALUES (%s, %s)
-            """
-            values = (data["Permission_Level_Code"], data["Permission_Level_Description"])
-            cur.execute(query, values)
+        # Check if the Permission_Level_Code already exists
+        cur.execute("SELECT * FROM Permission_Levels WHERE Permission_Level_Code = %s", (data["Permission_Level_Code"],))
+        if cur.fetchone():
+            return make_response(jsonify({"error": "Permission_Level_Code already exists."}), 400)
+
+        # Insert data into the database
+        query = """
+            INSERT INTO Permission_Levels (Permission_Level_Code, Permission_Level_Description)
+            VALUES (%s, %s)
+        """
+        values = (data["Permission_Level_Code"], data["Permission_Level_Description"])
+        cur.execute(query, values)
 
         mysql.connection.commit()
         return make_response(jsonify({"message": "Permission level(s) added successfully"}), 201)
     except Exception as e:
-        # Debugging output
-        print(f"Error: {str(e)}")
         return make_response(jsonify({"error": str(e)}), 400)
 
 
@@ -76,13 +76,13 @@ def update_permission_level(id):
         info = request.get_json()
 
         # Extract and validate data
-        permission_description = info.get("permission_description")
+        permission_description = info.get("Permission_Level_Description")
         if not permission_description:
             return make_response(jsonify({"error": "Permission description is required"}), 400)
 
         # Update database
         cur.execute(
-            "UPDATE Permission_Levels SET Permission_Description = %s WHERE Permission_Level_ID = %s",
+            "UPDATE Permission_Levels SET Permission_Level_Description = %s WHERE Permission_Level_ID = %s",
             (permission_description, id),
         )
         mysql.connection.commit()
@@ -125,12 +125,24 @@ def get_people():
         return make_response(jsonify({"error": str(e)}), 400)
 
 
+# Request validation schema
+class UserSchema(Schema):
+    Permission_Level_Code = fields.Str(required=True)
+    Login_Name = fields.Str(required=True)
+    Password = fields.Str(required=True)
+    Personal_Details = fields.Str(required=True)
+    Other_Details = fields.Str(required=True)
+    Country_Name = fields.Str(required=True)
+    Role_Description = fields.Str(required=True)
+
 @app.route("/people", methods=["POST"])
 def add_person():
     try:
-        cur = mysql.connection.cursor()
         info = request.get_json()
+        # Validate incoming request data
+        UserSchema().load(info)  # This will raise a ValidationError if validation fails
 
+        cur = mysql.connection.cursor()
         # Extract all fields from JSON
         required_fields = [
             "Permission_Level_Code",
@@ -170,6 +182,8 @@ def add_person():
         )
         mysql.connection.commit()
         return make_response(jsonify({"message": "Person added successfully"}), 201)
+    except ValidationError as err:
+        return make_response(jsonify({"error": err.messages}), 400)
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), 400)
 
@@ -478,7 +492,45 @@ def delete_monthly_report(id):
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), 400)
 
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify({"error": "Not found"}), 404)
 
+# User login route
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    username = data.get("Login_Name")
+    password = data.get("Password")
+
+    # Validate user credentials (this is a simplified example)
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT * FROM People WHERE Login_Name = %s AND Password = %s", (username, password))
+    user = cur.fetchone()
+    cur.close()
+
+    if user:
+        access_token = create_access_token(identity={"Login_Name": username, "Role_Description": user['Role_Description']})
+        return make_response(jsonify(access_token=access_token), 200)
+    return make_response(jsonify({"error": "Invalid credentials"}), 401)
+
+# Role-based access control decorator
+def role_required(role):
+    def wrapper(fn):
+        @jwt_required()
+        def decorated_function(*args, **kwargs):
+            current_user = get_jwt_identity()
+            if current_user['Role_Description'] != role:
+                return make_response(jsonify({"error": "Access forbidden: insufficient permissions"}), 403)
+            return fn(*args, **kwargs)
+        return decorated_function
+    return wrapper
+
+# Example of a protected route with role-based access control
+@app.route("/admin", methods=["GET"])
+@role_required("admin")  # Only allow access to users with the 'admin' role
+def admin_route():
+    return make_response(jsonify({"message": "Welcome to the admin panel!"}), 200)
 
 if __name__ == "__main__":
     app.run(debug=True)

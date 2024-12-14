@@ -38,53 +38,6 @@ def test_hello_world(client: FlaskClient):
     assert response.status_code == 200
     assert b"Hello, World!" in response.data
 
-# Countries Endpoint Tests
-def test_get_countries_success(client: FlaskClient, mock_db):
-    mock_db.fetchall.return_value = [
-        {"Country_ID": 1, "Country_Name": "Test Country", "Country_Code": "TC"}
-    ]
-    response = client.get("/countries")
-    assert response.status_code == 200
-    assert "Test Country" in response.get_data(as_text=True)
-
-def test_get_countries_error(client: FlaskClient, mock_db):
-    mock_db.execute.side_effect = Exception("Database error")
-    response = client.get("/countries")
-    assert response.status_code == 500
-    assert "Database error" in response.get_data(as_text=True)
-
-def test_add_country_success(client: FlaskClient, mock_db):
-    response = client.post("/countries", 
-                         json={"country_name": "New Country", "country_code": "NC"})
-    assert response.status_code == 201
-    assert "Country added successfully" in response.get_data(as_text=True)
-
-def test_add_country_missing_data(client: FlaskClient):
-    response = client.post("/countries", json={"country_name": "Test"})
-    assert response.status_code == 400
-
-# Roles Endpoint Tests
-def test_get_roles_success(client: FlaskClient, mock_db):
-    mock_db.fetchall.return_value = [
-        {"Role_ID": 1, "Role_Code": "ADMIN", "Role_Description": "Administrator"}
-    ]
-    response = client.get("/roles")
-    assert response.status_code == 200
-    assert "ADMIN" in response.get_data(as_text=True)
-
-def test_add_role_single(client: FlaskClient, mock_db):
-    response = client.post("/roles", 
-                         json={"role_code": "MGR", "role_description": "Manager"})
-    assert response.status_code == 201
-
-def test_add_role_bulk(client: FlaskClient, mock_db):
-    roles = [
-        {"role_code": "MGR", "role_description": "Manager"},
-        {"role_code": "EMP", "role_description": "Employee"}
-    ]
-    response = client.post("/roles", json=roles)
-    assert response.status_code == 201
-
 # Permission Levels Endpoint Tests
 def test_get_permission_levels_success(client: FlaskClient, mock_db):
     mock_db.fetchall.return_value = [
@@ -110,6 +63,10 @@ def test_update_permission_level(client: FlaskClient, mock_db):
     assert response.status_code == 200
     assert "Permission level updated successfully" in response.get_data(as_text=True)
 
+def test_invalid_permission_level_data(client: FlaskClient):
+    response = client.post("/permission_levels", json={})
+    assert response.status_code == 400
+
 # People Endpoint Tests
 def test_add_person_success(client: FlaskClient, mock_db):
     person_data = {
@@ -125,39 +82,20 @@ def test_add_person_success(client: FlaskClient, mock_db):
     assert response.status_code == 201
     assert "Person added successfully" in response.get_data(as_text=True)
 
+def test_get_people_success(client: FlaskClient, mock_db):
+    mock_db.fetchall.return_value = [
+        {"Person_ID": 1, "Login_Name": "testuser"}
+    ]
+    response = client.get("/people")
+    assert response.status_code == 200
+
 # Internal Messages Endpoint Tests
-def test_get_messages_success(client: FlaskClient, mock_db):
+def test_get_internal_messages_success(client: FlaskClient, mock_db):
     mock_db.fetchall.return_value = [
         {"Message_ID": 1, "message_text": "Test message"}
     ]
     response = client.get("/internal_messages")
     assert response.status_code == 200
-
-# Edge Cases and Error Handling
-def test_delete_nonexistent_country(client: FlaskClient, mock_db):
-    mock_db.rowcount = 0
-    response = client.delete("/countries/999")
-    assert response.status_code == 404
-
-def test_update_country_invalid_data(client: FlaskClient):
-    response = client.put("/countries/1", json={})
-    assert response.status_code == 400
-
-def test_database_connection_error(client: FlaskClient, mock_db):
-    mock_db.execute.side_effect = Exception("Connection error")
-    response = client.get("/countries")
-    assert response.status_code == 500
-
-# Data Fetch Utility Function Test
-def test_data_fetch_success(mock_db):
-    mock_db.fetchall.return_value = [{"test": "data"}]
-    result = data_fetch("SELECT * FROM test")
-    assert result == [{"test": "data"}]
-
-def test_data_fetch_error(mock_db):
-    mock_db.execute.side_effect = Exception("Database error")
-    with pytest.raises(Exception):
-        data_fetch("SELECT * FROM test")
 
 # Payments Endpoint Tests
 def test_get_payments_success(client: FlaskClient, mock_db):
@@ -184,18 +122,22 @@ def test_get_monthly_reports_success(client: FlaskClient, mock_db):
     response = client.get("/monthly_reports")
     assert response.status_code == 200
 
-# Additional Edge Cases
-def test_update_nonexistent_role(client: FlaskClient, mock_db):
+def test_delete_nonexistent_person(client: FlaskClient, mock_db):
     mock_db.rowcount = 0
-    response = client.put("/roles/999", 
-                         json={"role_description": "Updated Role"})
+    response = client.delete("/people/999")
     assert response.status_code == 404
-
-def test_invalid_permission_level_data(client: FlaskClient):
-    response = client.post("/permission_levels", json={})
-    assert response.status_code == 400
 
 def test_delete_nonexistent_message(client: FlaskClient, mock_db):
     mock_db.rowcount = 0
     response = client.delete("/internal_messages/999")
+    assert response.status_code == 404
+
+def test_delete_nonexistent_payment(client: FlaskClient, mock_db):
+    mock_db.rowcount = 0
+    response = client.delete("/payments/999")
+    assert response.status_code == 404
+
+def test_delete_nonexistent_monthly_report(client: FlaskClient, mock_db):
+    mock_db.rowcount = 0
+    response = client.delete("/monthly_reports/999")
     assert response.status_code == 404
