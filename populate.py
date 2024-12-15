@@ -14,47 +14,33 @@ app.config["MYSQL_CURSORCLASS"] = "DictCursor"
 mysql = MySQL(app)
 fake = Faker()
 
-# Function to generate fake country data
-def generate_countries():
-    countries = set()  # Using a set to ensure uniqueness
-    while len(countries) < 25:  # Keep generating until we have 25 unique countries
-        country_code = fake.country_code()  # Faker generates country code
-        country_name = fake.country()  # Faker generates country name
-        countries.add((country_code, country_name))  # Add tuple to set (ensures uniqueness)
-    return list(countries)  # Convert set back to list for insertion
+# Function to generate fake people data
+def generate_people():
+    # Fetch all country names and role names
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT Country_Name FROM Countries")
+    country_names = [row['Country_Name'] for row in cursor.fetchall()]
 
-# Function to generate fake role data
-def generate_roles():
-    roles = [
-        ('ADM', 'Administrator'),
-        ('USR', 'User'),
-        ('MOD', 'Moderator'),
-        ('MGR', 'Manager'),
-        ('DEV', 'Developer'),
-        ('SUP', 'Support'),
-        ('HR', 'Human Resources'),
-        ('FIN', 'Finance'),
-        ('MK', 'Marketing'),
-        ('OPS', 'Operations'),
-        ('ENG', 'Engineer'),
-        ('SA', 'Sales'),
-        ('IT', 'IT Specialist'),
-        ('PM', 'Project Manager'),
-        ('TL', 'Team Leader'),
-        ('ACCT', 'Accountant'),
-        ('DES', 'Designer'),
-        ('QAS', 'Quality Assurance Specialist'),
-        ('CS', 'Customer Service'),
-        ('BD', 'Business Development'),
-        ('COO', 'Chief Operating Officer'),
-        ('CFO', 'Chief Financial Officer'),
-        ('CEO', 'Chief Executive Officer'),
-        ('CTO', 'Chief Technology Officer'),
-        ('CIO', 'Chief Information Officer')
-    ]
-    return roles
+    cursor.execute("SELECT Role_Name FROM Roles")
+    role_names = [row['Role_Name'] for row in cursor.fetchall()]
 
-# Function to generate fake permission levels
+    cursor.close()
+
+    people = []
+    for _ in range(25):  # Generate 25 people
+        country_name = random.choice(country_names)  # Randomly select a country name
+        role_name = random.choice(role_names)  # Randomly select a role name
+        login_name = fake.user_name()  # Faker generates a random username
+        password = fake.password(length=12)  # Faker generates a random password
+        personal_details = fake.text(max_nb_chars=200)  # Faker generates random personal details
+        other_details = fake.text(max_nb_chars=200)  # Faker generates random other details
+
+        person = (country_name, role_name, login_name, password, personal_details, other_details)
+        people.append(person)
+
+    return people
+
+
 def generate_permission_levels():
     permission_levels = [
         ('ADM', 'Administrator'),
@@ -85,35 +71,6 @@ def generate_permission_levels():
     ]
     return permission_levels
 
-# Function to generate fake people data
-def generate_people():
-    # Get all existing country codes, permission levels, and role codes
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT Country_Code FROM Countries")
-    country_codes = [row['Country_Code'] for row in cursor.fetchall()]
-
-    cursor.execute("SELECT Permission_Level_Code FROM Permission_Levels")
-    permission_levels = [row['Permission_Level_Code'] for row in cursor.fetchall()]
-
-    cursor.execute("SELECT Role_Code FROM Roles")
-    role_codes = [row['Role_Code'] for row in cursor.fetchall()]
-
-    cursor.close()
-
-    people = []
-    for _ in range(25):  # Generate 25 people
-        country_code = random.choice(country_codes)
-        permission_level_code = random.choice(permission_levels)
-        role_code = random.choice(role_codes)
-        login_name = fake.user_name()  # Faker generates a random username
-        password = fake.password(length=12)  # Faker generates a random password
-        personal_details = fake.text(max_nb_chars=200)  # Faker generates random personal details
-        other_details = fake.text(max_nb_chars=200)  # Faker generates random other details
-
-        person = (country_code, permission_level_code, role_code, login_name, password, personal_details, other_details)
-        people.append(person)
-
-    return people
 def generate_internal_messages():
     # Get all existing Person_IDs
     cursor = mysql.connection.cursor()

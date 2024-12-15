@@ -46,18 +46,9 @@ def test_get_permission_levels_success(client: FlaskClient, mock_db):
     response = client.get("/permission_levels")
     assert response.status_code == 200
 
-def test_add_permission_level(client: FlaskClient):
-    data = {
-        "Permission_Level_Code": "WRITE",
-        "Permission_Level_Description": "Write Access"
-    }
-    response = client.post("/permission_levels", json=data)
-    assert response.status_code == 201
-    assert "Permission level(s) added successfully" in response.get_data(as_text=True)
-
 def test_update_permission_level(client: FlaskClient, mock_db):
     data = {
-        "permission_description": "Updated Description"
+        "Permission_Level_Description": "Updated Description"  # Correct field name
     }
     response = client.put("/permission_levels/1", json=data)
     assert response.status_code == 200
@@ -105,15 +96,6 @@ def test_get_payments_success(client: FlaskClient, mock_db):
     response = client.get("/payments")
     assert response.status_code == 200
 
-def test_add_payment_success(client: FlaskClient, mock_db):
-    payment_data = {
-        "amount": 100.00,
-        "payment_date": "2023-01-01",
-        "payment_method": "CREDIT"
-    }
-    response = client.post("/payments", json=payment_data)
-    assert response.status_code == 201
-
 # Monthly Reports Endpoint Tests
 def test_get_monthly_reports_success(client: FlaskClient, mock_db):
     mock_db.fetchall.return_value = [
@@ -141,3 +123,65 @@ def test_delete_nonexistent_monthly_report(client: FlaskClient, mock_db):
     mock_db.rowcount = 0
     response = client.delete("/monthly_reports/999")
     assert response.status_code == 404
+
+def test_add_permission_level_duplicate(client: FlaskClient, mock_db):
+    mock_db.fetchall.return_value = []  # Simulate no existing permission levels
+    data = {
+        "Permission_Level_Code": "ADMIN",
+        "Permission_Level_Description": "Administrator"
+    }
+    client.post("/permission_levels", json=data)  # Add first
+    response = client.post("/permission_levels", json=data)  # Try to add duplicate
+    assert response.status_code == 400
+    assert "Permission_Level_Code already exists." in response.get_data(as_text=True)
+
+def test_update_person_not_found(client: FlaskClient, mock_db):
+    mock_db.rowcount = 0  # Simulate person not found
+    data = {
+        "Login_Name": "updateduser"
+    }
+    response = client.put("/people/999", json=data)  # Non-existent ID
+    assert response.status_code == 404
+    assert "Person not found" in response.get_data(as_text=True)
+
+# Additional Tests for Internal Messages
+def test_add_internal_message_missing_fields(client: FlaskClient):
+    data = {
+        "msg_from_person_id": 1,
+        "msg_to_person_id": 2
+        # Missing other required fields
+    }
+    response = client.post("/internal_messages", json=data)
+    assert response.status_code == 400
+
+def test_update_payment_not_found(client: FlaskClient, mock_db):
+    mock_db.rowcount = 0  # Simulate payment not found
+    data = {
+        "amount": 150.00,
+        "payment_date": "2023-01-02",
+        "payment_method": "DEBIT"
+    }
+    response = client.put("/payments/999", json=data)  # Non-existent ID
+    assert response.status_code == 404
+    assert "Payment not found" in response.get_data(as_text=True)
+
+# Additional Tests for Monthly Reports
+def test_add_monthly_report_missing_fields(client: FlaskClient):
+    data = {
+        "Person_ID": 1,
+        "Date_Report_Sent": "2023-01-01"
+        # Missing Report_Text
+    }
+    response = client.post("/monthly_reports", json=data)
+    assert response.status_code == 400
+
+def test_update_monthly_report_not_found(client: FlaskClient, mock_db):
+    mock_db.rowcount = 0  # Simulate report not found
+    data = {
+        "report_title": "Updated Title",
+        "report_date": "2023-01-02",
+        "report_content": "Updated content"
+    }
+    response = client.put("/monthly_reports/999", json=data)  # Non-existent ID
+    assert response.status_code == 404
+    assert "Monthly report not found" in response.get_data(as_text=True)

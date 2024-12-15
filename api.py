@@ -1,4 +1,4 @@
-from flask import Flask, make_response, jsonify, request
+from flask import Flask, make_response, jsonify, request, abort
 from flask_mysqldb import MySQL
 from werkzeug.exceptions import BadRequest
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -76,7 +76,7 @@ def update_permission_level(id):
         info = request.get_json()
 
         # Extract and validate data
-        permission_description = info.get("Permission_Level_Description")
+        permission_description = info.get("Permission_Level_Description")  # Ensure this matches
         if not permission_description:
             return make_response(jsonify({"error": "Permission description is required"}), 400)
 
@@ -498,38 +498,73 @@ def not_found(error):
 
 # User login route
 @app.route("/login", methods=["POST"])
-def login():
+def login_user():
     data = request.get_json()
-    username = data.get("Login_Name")
-    password = data.get("Password")
+    # Check for missing fields
+    if not data or 'username' not in data or 'password' not in data:
+        abort(400, description="Missing username or password")
 
-    # Validate user credentials (this is a simplified example)
+    username = data['username']
+    password = data['password']
+
+    # Fetch user from the database
     cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM People WHERE Login_Name = %s AND Password = %s", (username, password))
+    cur.execute("SELECT * FROM People WHERE Login_Name = %s", (username,))
     user = cur.fetchone()
     cur.close()
 
-    if user:
-        access_token = create_access_token(identity={"Login_Name": username, "Role_Description": user['Role_Description']})
-        return make_response(jsonify(access_token=access_token), 200)
-    return make_response(jsonify({"error": "Invalid credentials"}), 401)
+    # Validate user credentials
+    if user is None or user['Password'] != password:  # Assuming user['Password'] is the hashed password
+        abort(401, description="Invalid credentials")
+
+    # Create JWT token (identity should be a simple value like username)
+    access_token = create_access_token(identity=username)  # Pass only username as identity
+    return jsonify(access_token=access_token), 200
 
 # Role-based access control decorator
 def role_required(role):
     def wrapper(fn):
         @jwt_required()
         def decorated_function(*args, **kwargs):
-            current_user = get_jwt_identity()
-            if current_user['Role_Description'] != role:
-                return make_response(jsonify({"error": "Access forbidden: insufficient permissions"}), 403)
+            current_user = get_jwt_identity()  # This is the username (string)
+            
+            # Fetch the user's role from the database using the username
+            cur = mysql.connection.cursor()
+            cur.execute("SELECT Role_Description FROM People WHERE Login_Name = %s", (current_user,))
+            user = cur.fetchone()
+            cur.close()
+
+            if user:
+                role_description = user.get('Role_Description', None)
+                if role_description != role:
+                    return make_response(jsonify({"error": "Access forbidden: insufficient permissions"}), 403)
+            else:
+                return make_response(jsonify({"error": "User not found"}), 404)
+
             return fn(*args, **kwargs)
         return decorated_function
     return wrapper
 
-# Example of a protected route with role-based access control
+
+# Admin route
 @app.route("/admin", methods=["GET"])
-@role_required("admin")  # Only allow access to users with the 'admin' role
+@role_required("Manager Role")
 def admin_route():
+    current_user = get_jwt_identity()  # This is the username (string)
+    
+    # Fetch the user's role from the database using the username
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT Role_Description FROM People WHERE Login_Name = %s", (current_user,))
+    user = cur.fetchone()
+    cur.close()
+
+    if user:
+        role_description = user.get('Role_Description', None)
+        if role_description != "Manager Role":
+            return make_response(jsonify({"error": "Access forbidden: insufficient permissions"}), 403)
+    else:
+        return make_response(jsonify({"error": "User not found"}), 404)
+
     return make_response(jsonify({"message": "Welcome to the admin panel!"}), 200)
 
 if __name__ == "__main__":
