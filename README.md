@@ -7,7 +7,7 @@ A Customer Management Database System (CMDS) is a software solution designed to 
 ```cmd
 pip install -r requirements.txt
 
-## Configuration
+### Configuration
 Environment variables needed:
 blinker==1.9.0
 click==8.1.7
@@ -39,7 +39,7 @@ Werkzeug==3.1.3
 DATABASE_URL
 Drew's_secret_key123
 
-## API Endpoints (markdown table)
+#### API Endpoints (markdown table)
 Endpoint	Method		Description
 =====================================
 | Endpoint                     | Method | Description                          |
