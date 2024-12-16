@@ -82,7 +82,7 @@ Werkzeug==3.1.3
 - Run the following command:
 
 ```cmd
-pytest --cov=app tests/
+pytest test.py
 ```
 
 ## Git Commit Guidelines
