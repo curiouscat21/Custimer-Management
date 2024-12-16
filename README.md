@@ -1,14 +1,24 @@
 # Project Title
 Customer Management API
+
 ## Description
-A Customer Management Database System (CMDS) is a software solution designed to store, organize, and manage customer information efficiently. 
+A Customer Management Database System (CMDS) is a software solution designed to store, organize, and manage customer information efficiently.
 
 ## Installation
 ```cmd
 pip install -r requirements.txt
+```
 
 ### Configuration
 Environment variables needed:
+
+```plaintext
+DATABASE_URL
+Drew's_secret_key123
+```
+
+### Dependencies
+```
 blinker==1.9.0
 click==8.1.7
 colorama==0.4.6
@@ -35,13 +45,10 @@ python-dateutil==2.9.0.post0
 six==1.17.0
 typing_extensions==4.12.2
 Werkzeug==3.1.3
+```
 
-DATABASE_URL
-Drew's_secret_key123
+## API Endpoints
 
-#### API Endpoints (markdown table)
-Endpoint	Method		Description
-=====================================
 | Endpoint                     | Method | Description                          |
 |------------------------------|--------|--------------------------------------|
 | /api/permission_levels       | GET    | List all permission levels           |
@@ -65,17 +72,23 @@ Endpoint	Method		Description
 | /api/monthly_reports/<int:id>| PUT    | Update an existing monthly report     |
 | /api/monthly_reports/<int:id>| DELETE | Delete a monthly report              |
 | /api/login                   | POST   | User login                           |
-| /api/admin                   | GET    | Admin panel (restricted access)     |
+| /api/admin                   | GET    | Admin panel (restricted access)      |
 
 ## Testing
 
-## Testing
- Instructions for running tests
-…
+### Instructions for running tests
+- Ensure all dependencies are installed.
+- Set up the required environment variables.
+- Run the following command:
+
+```cmd
+pytest --cov=app tests/
+```
 
 ## Git Commit Guidelines
 
 Use conventional commits:
+
 ```bash
 feat: add user authentication
 fix: resolve database connection issue
