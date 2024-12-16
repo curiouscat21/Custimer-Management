@@ -42,9 +42,32 @@ Drew's_secret_key123
 ## API Endpoints (markdown table)
 Endpoint	Method		Description
 =====================================
-/api/users	GET		List all users
-/api/users	POST		Create user
-..
+| Endpoint                     | Method | Description                          |
+|------------------------------|--------|--------------------------------------|
+| /api/permission_levels       | GET    | List all permission levels           |
+| /api/permission_levels       | POST   | Create a new permission level        |
+| /api/permission_levels/<int:id> | PUT    | Update an existing permission level   |
+| /api/permission_levels/<int:id> | DELETE | Delete a permission level            |
+| /api/people                  | GET    | List all people                      |
+| /api/people                  | POST   | Create a new person                  |
+| /api/people/<int:id>        | PUT    | Update an existing person            |
+| /api/people/<int:id>        | DELETE | Delete a person                      |
+| /api/internal_messages        | GET    | List all internal messages           |
+| /api/internal_messages        | POST   | Create a new internal message        |
+| /api/internal_messages/<int:id> | PUT    | Update an existing internal message   |
+| /api/internal_messages/<int:id> | DELETE | Delete an internal message           |
+| /api/payments                | GET    | List all payments                    |
+| /api/payments                | POST   | Create a new payment                 |
+| /api/payments/<int:id>      | PUT    | Update an existing payment           |
+| /api/payments/<int:id>      | DELETE | Delete a payment                     |
+| /api/monthly_reports         | GET    | List all monthly reports             |
+| /api/monthly_reports         | POST   | Create a new monthly report          |
+| /api/monthly_reports/<int:id>| PUT    | Update an existing monthly report     |
+| /api/monthly_reports/<int:id>| DELETE | Delete a monthly report              |
+| /api/login                   | POST   | User login                           |
+| /api/admin                   | GET    | Admin panel (restricted access)     |
+
+## Testing
 
 ## Testing
  Instructions for running tests
