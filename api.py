@@ -35,7 +35,7 @@ def validate_actor_data(data):
 @app.route("/permission_levels", methods=["GET"])
 def get_permission_levels():
     try:
-        data = data_fetch("SELECT * FROM Permission_Levels")
+        data = data_fetch("SELECT * FROM permission_Levels")
         return make_response(jsonify(data), 200)
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), 500)
@@ -51,13 +51,13 @@ def add_permission_level():
             return make_response(jsonify({"error": "Both Permission_Level_Code and Permission_Level_Description are required."}), 400)
 
         # Check if the Permission_Level_Code already exists
-        cur.execute("SELECT * FROM Permission_Levels WHERE Permission_Level_Code = %s", (data["Permission_Level_Code"],))
+        cur.execute("SELECT * FROM permission_Levels WHERE Permission_Level_Code = %s", (data["Permission_Level_Code"],))
         if cur.fetchone():
             return make_response(jsonify({"error": "Permission_Level_Code already exists."}), 400)
 
         # Insert data into the database
         query = """
-            INSERT INTO Permission_Levels (Permission_Level_Code, Permission_Level_Description)
+            INSERT INTO permission_Levels (Permission_Level_Code, Permission_Level_Description)
             VALUES (%s, %s)
         """
         values = (data["Permission_Level_Code"], data["Permission_Level_Description"])
@@ -82,7 +82,7 @@ def update_permission_level(id):
 
         # Update database
         cur.execute(
-            "UPDATE Permission_Levels SET Permission_Level_Description = %s WHERE Permission_Level_ID = %s",
+            "UPDATE permission_Levels SET Permission_Level_Description = %s WHERE Permission_Level_ID = %s",
             (permission_description, id),
         )
         mysql.connection.commit()
@@ -98,7 +98,7 @@ def update_permission_level(id):
 def delete_permission_level(id):
     try:
         cur = mysql.connection.cursor()
-        cur.execute("DELETE FROM Permission_Levels WHERE Permission_Level_ID = %s", (id,))
+        cur.execute("DELETE FROM permission_Levels WHERE Permission_Level_ID = %s", (id,))
         mysql.connection.commit()
 
         if cur.rowcount == 0:
@@ -253,7 +253,7 @@ def delete_person(id):
 @app.route("/internal_messages", methods=["GET"])
 def get_internal_messages():
     try:
-        data = data_fetch("SELECT * FROM Internal_Messages")
+        data = data_fetch("SELECT * FROM internal_Messages")
         return make_response(jsonify(data), 200)
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), 500)
@@ -270,7 +270,7 @@ def add_internal_message():
         # Check if the data is a list (for bulk insertion) or a single object
         if isinstance(data, list):
             query = """
-                INSERT INTO Internal_Messages (msg_from_person_id, msg_to_person_id, date_message_sent, message_subject, message_text)
+                INSERT INTO internal_Messages (msg_from_person_id, msg_to_person_id, date_message_sent, message_subject, message_text)
                 VALUES (%s, %s, %s, %s, %s)
             """
             values = [(msg["msg_from_person_id"], msg["msg_to_person_id"], msg["date_message_sent"], 
@@ -279,7 +279,7 @@ def add_internal_message():
             cur.executemany(query, values)
         else:
             query = """
-                INSERT INTO Internal_Messages (msg_from_person_id, msg_to_person_id, date_message_sent, message_subject, message_text)
+                INSERT INTO internal_Messages (msg_from_person_id, msg_to_person_id, date_message_sent, message_subject, message_text)
                 VALUES (%s, %s, %s, %s, %s)
             """
             values = (data["msg_from_person_id"], data["msg_to_person_id"], data["date_message_sent"], 
@@ -311,7 +311,7 @@ def update_internal_message(id):
 
         # Update database
         cur.execute(
-            "UPDATE Internal_Messages SET Message_Content = %s, Sender = %s, Recipient = %s, Date_Sent = %s WHERE Message_ID = %s",
+            "UPDATE internal_Messages SET Message_Content = %s, Sender = %s, Recipient = %s, Date_Sent = %s WHERE Message_ID = %s",
             (message_content, sender, recipient, date_sent, id),
         )
         mysql.connection.commit()
@@ -327,7 +327,7 @@ def update_internal_message(id):
 def delete_internal_message(id):
     try:
         cur = mysql.connection.cursor()
-        cur.execute("DELETE FROM Internal_Messages WHERE Message_ID = %s", (id,))
+        cur.execute("DELETE FROM internal_Messages WHERE Message_ID = %s", (id,))
         mysql.connection.commit()
 
         if cur.rowcount == 0:
@@ -354,7 +354,7 @@ def add_payment():
 
         # Insert into database
         cur.execute(
-            "INSERT INTO Payments (Amount, Payment_Date, Payment_Method) VALUES (%s, %s, %s)",
+            "INSERT INTO payments (Amount, Payment_Date, Payment_Method) VALUES (%s, %s, %s)",
             (amount, payment_date, payment_method),
         )
         mysql.connection.commit()
@@ -379,7 +379,7 @@ def update_payment(id):
 
         # Update database
         cur.execute(
-            "UPDATE Payments SET Amount = %s, Payment_Date = %s, Payment_Method = %s WHERE Payment_ID = %s",
+            "UPDATE payments SET Amount = %s, Payment_Date = %s, Payment_Method = %s WHERE Payment_ID = %s",
             (amount, payment_date, payment_method, id),
         )
         mysql.connection.commit()
@@ -395,7 +395,7 @@ def update_payment(id):
 def delete_payment(id):
     try:
         cur = mysql.connection.cursor()
-        cur.execute("DELETE FROM Payments WHERE Payment_ID = %s", (id,))
+        cur.execute("DELETE FROM payments WHERE Payment_ID = %s", (id,))
         mysql.connection.commit()
 
         if cur.rowcount == 0:
@@ -408,7 +408,7 @@ def delete_payment(id):
 @app.route("/payments", methods=["GET"])
 def get_payments():
     try:
-        data = data_fetch("SELECT * FROM Payments")
+        data = data_fetch("SELECT * FROM payments")
         return make_response(jsonify(data), 200)
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), 500)
@@ -416,7 +416,7 @@ def get_payments():
 @app.route("/monthly_reports", methods=["GET"])
 def get_monthly_reports():
     try:
-        data = data_fetch("SELECT * FROM Monthly_Reports")
+        data = data_fetch("SELECT * FROM monthly_Reports")
         return make_response(jsonify(data), 200)
     except Exception as e:
         return make_response(jsonify({"error": str(e)}), 500)
@@ -430,7 +430,7 @@ def add_monthly_report():
         # Check if the data is a list (for bulk insertion) or a single object
         if isinstance(data, list):
             query = """
-                INSERT INTO Monthly_Reports (Person_ID, Date_Report_Sent, Report_Text)
+                INSERT INTO monthly_Reports (Person_ID, Date_Report_Sent, Report_Text)
                 VALUES (%s, %s, %s)
             """
             values = [(report["Person_ID"], report["Date_Report_Sent"], report["Report_Text"]) 
@@ -438,7 +438,7 @@ def add_monthly_report():
             cur.executemany(query, values)
         else:
             query = """
-                INSERT INTO Monthly_Reports (Person_ID, Date_Report_Sent, Report_Text)
+                INSERT INTO monthly_Reports (Person_ID, Date_Report_Sent, Report_Text)
                 VALUES (%s, %s, %s)
             """
             values = (data["Person_ID"], data["Date_Report_Sent"], data["Report_Text"])
@@ -466,7 +466,7 @@ def update_monthly_report(id):
 
         # Update database
         cur.execute(
-            "UPDATE Monthly_Reports SET Report_Title = %s, Report_Date = %s, Report_Content = %s WHERE Report_ID = %s",
+            "UPDATE monthly_Reports SET Report_Title = %s, Report_Date = %s, Report_Content = %s WHERE Report_ID = %s",
             (report_title, report_date, report_content, id),
         )
         mysql.connection.commit()
@@ -482,7 +482,7 @@ def update_monthly_report(id):
 def delete_monthly_report(id):
     try:
         cur = mysql.connection.cursor()
-        cur.execute("DELETE FROM Monthly_Reports WHERE Report_ID = %s", (id,))
+        cur.execute("DELETE FROM monthly_Reports WHERE Report_ID = %s", (id,))
         mysql.connection.commit()
 
         if cur.rowcount == 0:
