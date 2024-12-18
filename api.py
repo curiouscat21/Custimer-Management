@@ -10,7 +10,7 @@ app.config["MYSQL_USER"] = "root"
 app.config["MYSQL_PASSWORD"] = "root"
 app.config["MYSQL_DB"] = "CustomerManagementSystem"
 app.config["MYSQL_CURSORCLASS"] = "DictCursor"
-app.config["JWT_SECRET_KEY"] = "Drew's_secret_key123"  # Change this to a strong secret key
+app.config["JWT_SECRET_KEY"] = "Drew's_secret_key123"
 jwt = JWTManager(app)
 
 mysql = MySQL(app)
@@ -117,7 +117,7 @@ def get_people():
             SELECT Person_ID, Permission_Level_Code, Login_Name, 
                    Password, Personal_Details, Other_Details, Country_Name, 
                    Role_Description
-            FROM People
+            FROM people
         """)
         people = cur.fetchall()
         return make_response(jsonify({"people": people}), 200)
@@ -140,7 +140,7 @@ def add_person():
     try:
         info = request.get_json()
         # Validate incoming request data
-        UserSchema().load(info)  # This will raise a ValidationError if validation fails
+        UserSchema().load(info) 
 
         cur = mysql.connection.cursor()
         # Extract all fields from JSON
@@ -165,7 +165,7 @@ def add_person():
         # Insert data into the database
         cur.execute(
             """
-            INSERT INTO People (
+            INSERT INTO people (
                 Permission_Level_Code, Login_Name, Password,
                 Personal_Details, Other_Details, Country_Name, Role_Description
             ) VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -221,7 +221,7 @@ def update_person(id):
 
         # Create and execute update query
         query = f"""
-            UPDATE People 
+            UPDATE people 
             SET {", ".join(update_fields)}
             WHERE Person_ID = %s
         """
@@ -239,7 +239,7 @@ def update_person(id):
 def delete_person(id):
     try:
         cur = mysql.connection.cursor()
-        cur.execute("DELETE FROM People WHERE Person_ID = %s", (id,))
+        cur.execute("DELETE FROM people WHERE Person_ID = %s", (id,))
         mysql.connection.commit()
 
         if cur.rowcount == 0:
@@ -509,7 +509,7 @@ def login_user():
 
     # Fetch user from the database
     cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM People WHERE Login_Name = %s", (username,))
+    cur.execute("SELECT * FROM people WHERE Login_Name = %s", (username,))
     user = cur.fetchone()
     cur.close()
 
@@ -530,7 +530,7 @@ def role_required(role):
             
             # Fetch the user's role from the database using the username
             cur = mysql.connection.cursor()
-            cur.execute("SELECT Role_Description FROM People WHERE Login_Name = %s", (current_user,))
+            cur.execute("SELECT Role_Description FROM people WHERE Login_Name = %s", (current_user,))
             user = cur.fetchone()
             cur.close()
 
@@ -554,7 +554,7 @@ def admin_route():
     
     # Fetch the user's role from the database using the username
     cur = mysql.connection.cursor()
-    cur.execute("SELECT Role_Description FROM People WHERE Login_Name = %s", (current_user,))
+    cur.execute("SELECT Role_Description FROM people WHERE Login_Name = %s", (current_user,))
     user = cur.fetchone()
     cur.close()
 
